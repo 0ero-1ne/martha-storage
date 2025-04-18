@@ -1,0 +1,6 @@
+[server]
+hostname = <hostname>
+port = <port>
+
+[dropbox]
+token = <access_token>
