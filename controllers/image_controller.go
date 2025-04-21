@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
-	"strconv"
+	"path/filepath"
 	"strings"
 
 	"github.com/0ero-1ne/martha-storage/config"
@@ -22,183 +22,102 @@ type ImageController struct {
 
 func (controller ImageController) GetImageURL(ctx *gin.Context) {
 	var imageRequest models.ImageRequest
-	err := ctx.ShouldBindJSON(&imageRequest)
-
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+	if err := ctx.ShouldBindJSON(&imageRequest); err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
+	imageURL, err := controller.getImageURL(imageRequest.Path)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(imageURL))
 }
 
 func (controller ImageController) UploadBookCover(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
-
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
-	bookId, err := strconv.ParseUint(ctx.Param("book_id"), 10, 64)
-
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: "\"book_id\" param was not provided",
-		})
-		ctx.Abort()
-		return
-	}
-
-	fileExtnesion := file.Filename[strings.LastIndex(file.Filename, "."):]
-	savePath := controller.Config.BookPath + "/book_" + fmt.Sprintf("%d", bookId) + fileExtnesion
+	bookId := ctx.GetUint("book_id")
+	fileExt := filepath.Ext(file.Filename)
+	savePath := fmt.Sprintf("%s/book_%d%s", controller.Config.BookPath, bookId, fileExt)
 
 	result, err := controller.uploadImage(savePath, file)
-
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(err.Error()))
 		return
 	}
 
 	imageURL, err := controller.getImageURL(result)
-
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.Response{
-		Data:  imageURL,
-		Error: "",
-	})
-	ctx.Abort()
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(imageURL))
 }
 
 func (controller ImageController) DeleteBookCover(ctx *gin.Context) {
 	var imageRequest models.ImageRequest
-	err := ctx.ShouldBindJSON(&imageRequest)
 
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+	if err := ctx.ShouldBindJSON(&imageRequest); err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
 	if err := controller.deleteImage(imageRequest.Path); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.Response{
-		Data:  "Image was successfully deleted",
-		Error: "",
-	})
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse("Image was successfully deleted"))
 }
 
 func (controller ImageController) UploadUserImage(ctx *gin.Context) {
 	file, err := ctx.FormFile("file")
-
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
-	userId, err := strconv.ParseUint(ctx.Param("user_id"), 10, 64)
-
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: "\"user_id\" param was not provided",
-		})
-		ctx.Abort()
-		return
-	}
-
-	fileExtnesion := file.Filename[strings.LastIndex(file.Filename, "."):]
-	savePath := controller.Config.UsersPath + "/user_" + fmt.Sprintf("%d", userId) + fileExtnesion
+	userId := ctx.GetUint("user_id")
+	fileExt := filepath.Ext(file.Filename)
+	savePath := fmt.Sprintf("%s/user_%d%s", controller.Config.BookPath, userId, fileExt)
 
 	result, err := controller.uploadImage(savePath, file)
-
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(err.Error()))
 		return
 	}
 
 	imageURL, err := controller.getImageURL(result)
-
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.Response{
-		Data:  imageURL,
-		Error: "",
-	})
-	ctx.Abort()
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(imageURL))
 }
 
 func (controller ImageController) DeleteUserImage(ctx *gin.Context) {
 	var imageRequest models.ImageRequest
-	err := ctx.ShouldBindJSON(&imageRequest)
 
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+	if err := ctx.ShouldBindJSON(&imageRequest); err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
 	if err := controller.deleteImage(imageRequest.Path); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.Response{
-			Data:  nil,
-			Error: err.Error(),
-		})
-		ctx.Abort()
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.Response{
-		Data:  "Image was successfully deleted",
-		Error: "",
-	})
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse("Image was successfully deleted"))
 }
 
 func (controller ImageController) uploadImage(savePath string, file *multipart.FileHeader) (string, error) {
@@ -210,10 +129,7 @@ func (controller ImageController) uploadImage(savePath string, file *multipart.F
 
 	defer fileData.Close()
 
-	result, err := controller.FileClient.Upload(
-		files.NewUploadArg(savePath),
-		fileData,
-	)
+	result, err := controller.FileClient.Upload(files.NewUploadArg(savePath), fileData)
 
 	if err != nil {
 		return "", err
