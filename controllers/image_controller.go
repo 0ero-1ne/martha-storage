@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/0ero-1ne/martha-storage/config"
@@ -37,14 +39,14 @@ func (controller ImageController) GetImageURL(ctx *gin.Context) {
 }
 
 func (controller ImageController) UploadBookCover(ctx *gin.Context) {
-	file, err := ctx.FormFile("file")
+	file, err := controller.loadFormFile(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
-	bookId := ctx.GetUint("book_id")
 	fileExt := filepath.Ext(file.Filename)
+	bookId := ctx.GetUint("book_id")
 	savePath := fmt.Sprintf("%s/book_%d%s", controller.Config.BookPath, bookId, fileExt)
 
 	result, err := controller.uploadImage(savePath, file)
@@ -53,13 +55,7 @@ func (controller ImageController) UploadBookCover(ctx *gin.Context) {
 		return
 	}
 
-	imageURL, err := controller.getImageURL(result)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, models.NewSuccessResponse(imageURL))
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(result))
 }
 
 func (controller ImageController) DeleteBookCover(ctx *gin.Context) {
@@ -79,14 +75,14 @@ func (controller ImageController) DeleteBookCover(ctx *gin.Context) {
 }
 
 func (controller ImageController) UploadUserImage(ctx *gin.Context) {
-	file, err := ctx.FormFile("file")
+	file, err := controller.loadFormFile(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
 		return
 	}
 
-	userId := ctx.GetUint("user_id")
 	fileExt := filepath.Ext(file.Filename)
+	userId := ctx.GetUint("user_id")
 	savePath := fmt.Sprintf("%s/user_%d%s", controller.Config.BookPath, userId, fileExt)
 
 	result, err := controller.uploadImage(savePath, file)
@@ -95,13 +91,7 @@ func (controller ImageController) UploadUserImage(ctx *gin.Context) {
 		return
 	}
 
-	imageURL, err := controller.getImageURL(result)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, models.NewSuccessResponse(imageURL))
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(result))
 }
 
 func (controller ImageController) DeleteUserImage(ctx *gin.Context) {
@@ -154,4 +144,23 @@ func (controller ImageController) getImageURL(path string) (string, error) {
 	}
 
 	return strings.ReplaceAll(result.Url, "&dl=0", "&dl=1"), nil
+}
+
+func (controller ImageController) loadFormFile(ctx *gin.Context) (*multipart.FileHeader, error) {
+	file, err := ctx.FormFile("file")
+
+	if err != nil {
+		return nil, err
+	}
+
+	validExtensions := []string{".jpg", ".jpeg"}
+	if !slices.Contains(validExtensions, strings.ToLower(filepath.Ext(file.Filename))) {
+		return nil, errors.New("Valid file extensions are only .jpg or .jpeg")
+	}
+
+	if file.Size > 500_000 {
+		return nil, errors.New("Valid file size less than 500Kb")
+	}
+
+	return file, nil
 }
