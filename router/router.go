@@ -3,31 +3,34 @@ package router
 import (
 	"github.com/0ero-1ne/martha-storage/config"
 	"github.com/0ero-1ne/martha-storage/controllers"
+	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox"
+	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/files"
+	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/sharing"
 	"github.com/gin-gonic/gin"
 )
 
 func NewRouter(config config.DropboxConfig) *gin.Engine {
-	router := gin.New()
+	router := gin.Default()
+
 	api := router.Group("/api")
 
-	bookRoutes(api)
-	userRoutes(api)
+	fileClient := files.New(dropbox.Config{
+		Token:    config.Token,
+		LogLevel: dropbox.LogDebug,
+	})
+
+	sharingClient := sharing.New(dropbox.Config{
+		Token:    config.Token,
+		LogLevel: dropbox.LogDebug,
+	})
+
+	imageController := controllers.ImageController{
+		Config:        config,
+		FileClient:    fileClient,
+		SharingClient: sharingClient,
+	}
+
+	imageRouter(api.Group("/images"), imageController)
 
 	return router
-}
-
-func bookRoutes(globalRoute *gin.RouterGroup) {
-	bookRoutes := globalRoute.Group("/books")
-	controller := controllers.BookController{}
-
-	bookRoutes.POST("/upload", controller.UploadImage)
-	bookRoutes.DELETE("/delete", controller.DeleteImage)
-}
-
-func userRoutes(globalRoute *gin.RouterGroup) {
-	userRoutes := globalRoute.Group("/users")
-	controller := controllers.UserController{}
-
-	userRoutes.POST("/upload", controller.UploadImage)
-	userRoutes.DELETE("/delete", controller.DeleteImage)
 }
