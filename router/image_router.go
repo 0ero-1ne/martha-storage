@@ -2,24 +2,15 @@ package router
 
 import (
 	"github.com/0ero-1ne/martha-storage/controllers"
-	"github.com/0ero-1ne/martha-storage/middlewares"
 	"github.com/gin-gonic/gin"
 )
 
-func imageRouter(globalRoute *gin.RouterGroup, controller controllers.ImageController) {
-	globalRoute.GET("/", controller.GetImageURL)
+func imageRouter(globalRoute *gin.Engine, controller controllers.ImageController) {
+	api := globalRoute.Group("/api")
 
-	bookRoutes := globalRoute.Group("/books")
-	bookRoutes.POST("/:book_id",
-		middlewares.ParseParamsId([]string{"book_id"}),
-		controller.UploadBookCover,
-	)
-	bookRoutes.DELETE("/", controller.DeleteBookCover)
+	imageApi := api.Group("/images")
 
-	userRoutes := globalRoute.Group("/users")
-	userRoutes.POST("/:user_id",
-		middlewares.ParseParamsId([]string{"user_id"}),
-		controller.UploadUserImage,
-	)
-	userRoutes.DELETE("/", controller.DeleteUserImage)
+	globalRoute.Static("/images", controller.Config.ImagesDir)
+	imageApi.POST("/", controller.UploadImage)
+	imageApi.DELETE("/:image", controller.DeleteImage)
 }

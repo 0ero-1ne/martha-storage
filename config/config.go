@@ -8,20 +8,18 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+type StaticConfig struct {
+	ImagesDir string `ini:"images_dir"`
+}
+
 type ServerConfig struct {
 	Hostname string `ini:"hostname"`
 	Port     int    `ini:"port"`
 }
 
-type DropboxConfig struct {
-	Token     string `ini:"token"`
-	UsersPath string `ini:"users_path"`
-	BookPath  string `ini:"books_path"`
-}
-
 type Config struct {
-	ServerConfig  ServerConfig  `ini:"server"`
-	DropboxConfig DropboxConfig `ini:"dropbox"`
+	ServerConfig ServerConfig `ini:"server"`
+	StaticConfig StaticConfig `ini:"static"`
 }
 
 func Init(configPath string) (*Config, error) {

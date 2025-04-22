@@ -5,40 +5,28 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/0ero-1ne/martha-storage/config"
 	"github.com/0ero-1ne/martha-storage/models"
-	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/files"
-	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/sharing"
+	"github.com/0ero-1ne/martha-storage/utils"
 	"github.com/gin-gonic/gin"
 )
 
 type ImageController struct {
-	Config        config.DropboxConfig
-	FileClient    files.Client
-	SharingClient sharing.Client
+	Config config.StaticConfig
 }
 
-func (controller ImageController) GetImageURL(ctx *gin.Context) {
-	var imageRequest models.ImageRequest
-	if err := ctx.ShouldBindJSON(&imageRequest); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
-		return
+func NewImageController(config config.StaticConfig) ImageController {
+	return ImageController{
+		Config: config,
 	}
-
-	imageURL, err := controller.getImageURL(imageRequest.Path)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, models.NewSuccessResponse(imageURL))
 }
 
-func (controller ImageController) UploadBookCover(ctx *gin.Context) {
+func (controller ImageController) UploadImage(ctx *gin.Context) {
 	file, err := controller.loadFormFile(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
@@ -46,104 +34,34 @@ func (controller ImageController) UploadBookCover(ctx *gin.Context) {
 	}
 
 	fileExt := filepath.Ext(file.Filename)
-	bookId := ctx.GetUint("book_id")
-	savePath := fmt.Sprintf("%s/book_%d%s", controller.Config.BookPath, bookId, fileExt)
 
-	result, err := controller.uploadImage(savePath, file)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(err.Error()))
+	randomizer := utils.NewRandomizer()
+	randomFileName, _ := randomizer.GenerateString(16)
+
+	savePath := fmt.Sprintf("%s/%s%s", controller.Config.ImagesDir, randomFileName, fileExt)
+	if err := ctx.SaveUploadedFile(file, savePath); err != nil {
+		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse("Server error, try again later"))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, models.NewSuccessResponse(result))
+	returnValue := fmt.Sprintf("%s/images/%s%s", ctx.Request.Host, randomFileName, fileExt)
+	ctx.JSON(http.StatusOK, models.NewSuccessResponse(returnValue))
 }
 
-func (controller ImageController) DeleteBookCover(ctx *gin.Context) {
-	var imageRequest models.ImageRequest
+func (controller ImageController) DeleteImage(ctx *gin.Context) {
+	imageName := ctx.Param("image")
 
-	if err := ctx.ShouldBindJSON(&imageRequest); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
+	if len(imageName) == 0 {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid image param value"))
 		return
 	}
 
-	if err := controller.deleteImage(imageRequest.Path); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
+	if err := os.Remove(controller.Config.ImagesDir + "/" + imageName); err != nil {
+		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse("Invalid image param value"))
 		return
 	}
 
 	ctx.JSON(http.StatusOK, models.NewSuccessResponse("Image was successfully deleted"))
-}
-
-func (controller ImageController) UploadUserImage(ctx *gin.Context) {
-	file, err := controller.loadFormFile(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
-		return
-	}
-
-	fileExt := filepath.Ext(file.Filename)
-	userId := ctx.GetUint("user_id")
-	savePath := fmt.Sprintf("%s/user_%d%s", controller.Config.BookPath, userId, fileExt)
-
-	result, err := controller.uploadImage(savePath, file)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, models.NewErrorResponse(err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, models.NewSuccessResponse(result))
-}
-
-func (controller ImageController) DeleteUserImage(ctx *gin.Context) {
-	var imageRequest models.ImageRequest
-
-	if err := ctx.ShouldBindJSON(&imageRequest); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
-		return
-	}
-
-	if err := controller.deleteImage(imageRequest.Path); err != nil {
-		ctx.JSON(http.StatusBadRequest, models.NewErrorResponse(err.Error()))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, models.NewSuccessResponse("Image was successfully deleted"))
-}
-
-func (controller ImageController) uploadImage(savePath string, file *multipart.FileHeader) (string, error) {
-	fileData, err := file.Open()
-
-	if err != nil {
-		return "", err
-	}
-
-	defer fileData.Close()
-
-	result, err := controller.FileClient.Upload(files.NewUploadArg(savePath), fileData)
-
-	if err != nil {
-		return "", err
-	}
-
-	return result.PathDisplay, nil
-}
-
-func (controller ImageController) deleteImage(path string) error {
-	_, err := controller.FileClient.DeleteV2(files.NewDeleteArg(path))
-
-	return err
-}
-
-func (controller ImageController) getImageURL(path string) (string, error) {
-	result, err := controller.SharingClient.CreateSharedLink(
-		sharing.NewCreateSharedLinkArg(path),
-	)
-
-	if err != nil {
-		return "", err
-	}
-
-	return strings.ReplaceAll(result.Url, "&dl=0", "&dl=1"), nil
 }
 
 func (controller ImageController) loadFormFile(ctx *gin.Context) (*multipart.FileHeader, error) {

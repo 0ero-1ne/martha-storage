@@ -22,7 +22,7 @@ func main() {
 		panic("Config initialization error: " + err.Error())
 	}
 
-	router := router.NewRouter(config.DropboxConfig)
+	router := router.NewRouter(*config)
 	server := server.NewHttpServer(config.ServerConfig, router)
 
 	go func() {
