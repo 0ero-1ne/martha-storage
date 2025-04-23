@@ -10,6 +10,8 @@ import (
 
 type StaticConfig struct {
 	ImagesDir string `ini:"images_dir"`
+	AudiosDir string `ini:"audios_dir"`
+	FilesDir  string `ini:"files_dir"`
 }
 
 type ServerConfig struct {
@@ -17,9 +19,14 @@ type ServerConfig struct {
 	Port     int    `ini:"port"`
 }
 
+type DatabaseConfig struct {
+	DbName string `ini:"db_name"`
+}
+
 type Config struct {
-	ServerConfig ServerConfig `ini:"server"`
-	StaticConfig StaticConfig `ini:"static"`
+	ServerConfig   ServerConfig   `ini:"server"`
+	StaticConfig   StaticConfig   `ini:"static"`
+	DatabaseConfig DatabaseConfig `ini:"database"`
 }
 
 func Init(configPath string) (*Config, error) {

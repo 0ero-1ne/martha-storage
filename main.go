@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/0ero-1ne/martha-storage/config"
+	"github.com/0ero-1ne/martha-storage/db"
 	"github.com/0ero-1ne/martha-storage/router"
 	"github.com/0ero-1ne/martha-storage/server"
 )
@@ -22,7 +23,13 @@ func main() {
 		panic("Config initialization error: " + err.Error())
 	}
 
-	router := router.NewRouter(*config)
+	database, err := db.NewDbConnection(config.DatabaseConfig)
+
+	if err != nil {
+		panic("Can not connect to database: " + err.Error())
+	}
+
+	router := router.NewRouter(*config, database)
 	server := server.NewHttpServer(config.ServerConfig, router)
 
 	go func() {

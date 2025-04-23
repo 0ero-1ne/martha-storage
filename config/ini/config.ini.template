@@ -3,4 +3,9 @@ hostname = <hostname>
 port = <port>
 
 [static]
-images_dir = "./static/images"
+images_dir = "./static/images" // book covers and users avatars
+audios_dir = "./static/audios" // audiobooks (by chapter)
+files_dir = "./static/files" // books (by chapter)
+
+[database]
+db_name = <db_name>
