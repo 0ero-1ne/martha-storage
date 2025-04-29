@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/0ero-1ne/martha-storage/models"
-	"github.com/0ero-1ne/martha-storage/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -82,9 +82,5 @@ func (repo FileRepository) DeleteFile(path, image string) error {
 }
 
 func (repo FileRepository) generateRandomFilename() string {
-	randomizer := utils.NewRandomizer()
-	filenameSize := 26
-	randomFileName, _ := randomizer.GenerateString(filenameSize)
-
-	return randomFileName
+	return uuid.New().String()
 }
