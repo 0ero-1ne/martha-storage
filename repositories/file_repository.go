@@ -22,11 +22,14 @@ func NewFileRepository(db *gorm.DB) FileRepository {
 	}
 }
 
-func (repo FileRepository) GetFile(image string) string {
+func (repo FileRepository) GetFile(
+	fileUUID string,
+	filetype models.Filetype,
+) string {
 	var file models.File
 
-	tx := repo.db.First(&file, "filename = ?", image)
-	if tx.Error != nil {
+	tx := repo.db.First(&file, "filename = ?", fileUUID)
+	if tx.Error != nil || file.Filetype != filetype {
 		return ""
 	}
 
@@ -37,6 +40,7 @@ func (repo FileRepository) UploadFile(
 	ctx *gin.Context,
 	file *multipart.FileHeader,
 	dirPath string,
+	filetype models.Filetype,
 ) (string, error) {
 	fileExt := filepath.Ext(file.Filename)
 	newFilename := repo.generateRandomFilename()
@@ -44,6 +48,7 @@ func (repo FileRepository) UploadFile(
 	saveFile := &models.File{
 		Filename:  newFilename,
 		Extension: fileExt,
+		Filetype:  filetype,
 	}
 
 	tx := repo.db.Create(&saveFile)
@@ -60,10 +65,14 @@ func (repo FileRepository) UploadFile(
 	return newFilename, nil
 }
 
-func (repo FileRepository) DeleteFile(path, image string) error {
+func (repo FileRepository) DeleteFile(
+	path string,
+	fileUUID string,
+	filetype models.Filetype,
+) error {
 	var file models.File
 
-	tx := repo.db.First(&file, "filename = ?", image)
+	tx := repo.db.First(&file, "filename = ?", fileUUID)
 	if tx.Error != nil {
 		return tx.Error
 	}

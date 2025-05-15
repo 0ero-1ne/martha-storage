@@ -11,6 +11,6 @@ func imageRouter(globalRoute *gin.Engine, controller controllers.ImageController
 	imageApi := api.Group("/images")
 
 	globalRoute.GET("/images/:image", controller.GetImage)
-	imageApi.POST("/", controller.UploadImage)
+	imageApi.POST("", controller.UploadImage)
 	imageApi.DELETE("/:image", controller.DeleteImage)
 }

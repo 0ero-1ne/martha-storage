@@ -8,4 +8,4 @@ audios_dir = "./static/audios" // audiobooks (by chapter)
 files_dir = "./static/files" // books (by chapter)
 
 [database]
-db_name = <db_name>
+db_name = <db_name>.db

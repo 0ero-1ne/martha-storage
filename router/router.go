@@ -12,9 +12,14 @@ func NewRouter(config config.Config, database *gorm.DB) *gin.Engine {
 	router := gin.Default()
 
 	repo := repositories.NewFileRepository(database)
+
 	imageController := controllers.NewImageController(config.StaticConfig, repo)
+	chapterController := controllers.NewChapterController(config.StaticConfig, repo)
+	audioController := controllers.NewAudioController(config.StaticConfig, repo)
 
 	imageRouter(router, imageController)
+	chapterRouter(router, chapterController)
+	audioRouter(router, audioController)
 
 	return router
 }
