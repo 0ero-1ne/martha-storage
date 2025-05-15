@@ -87,7 +87,7 @@ func (controller AudioController) checkAudioFile(ctx *gin.Context) (*multipart.F
 		return nil, errors.New("valid file extension is .mp3 and .flac")
 	}
 
-	if file.Size > 30_000_000 {
+	if file.Size > 100_000_000 {
 		return nil, errors.New("valid file size less than 30MB")
 	}
 
