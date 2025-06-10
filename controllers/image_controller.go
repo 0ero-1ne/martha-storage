@@ -84,8 +84,8 @@ func (controller ImageController) checkImageFile(ctx *gin.Context) (*multipart.F
 		return nil, errors.New("valid file extensions are only .jpg or .jpeg")
 	}
 
-	if file.Size > 500_000 {
-		return nil, errors.New("valid file size less than 500Kb")
+	if file.Size > 10_000_000 {
+		return nil, errors.New("valid file size less than 10MB")
 	}
 
 	return file, nil
